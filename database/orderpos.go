@@ -23,5 +23,5 @@ type OrderPos struct {
 
 	ResourceID int
 	Resource   Resource
-	Carrier    Carrier
+	Carrier    *Carrier
 }

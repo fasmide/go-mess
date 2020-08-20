@@ -72,17 +72,13 @@ func (d *Database) ActiveOrders() ([]Order, error) {
 		// further populate Positions
 		pos, err := d.db.Query(`
 			select 
-				tblOrderPos.*, tblResource.*, tblCarrier.*
+				tblOrderPos.*, tblResource.*
 			from 
-				tblOrderPos, tblResource, tblCarrier
+				tblOrderPos, tblResource
 			where
 				tblOrderPos.ONo = ?
 			and
 				tblOrderPos.ResourceID = tblResource.ResourceID
-			and 
-				tblCarrier.ONo = tblOrderPos.ONo
-			and
-				tblCarrier.OPos = tblOrderPos.OPos 
 		`, order.ONo)
 
 		if err != nil {
@@ -120,26 +116,60 @@ func (d *Database) ActiveOrders() ([]Order, error) {
 				&p.Resource.WebPage,
 				&p.Resource.DefaultBrowser,
 				&p.Resource.TopologyType,
-
-				&p.Carrier.CarrierID,
-				&p.Carrier.CarrierTypeID,
-				&p.Carrier.ONo,
-				&p.Carrier.OPos,
-				&p.Carrier.PNo,
-				&p.Carrier.PNoGroup,
 			)
 
 			if err != nil {
-				return nil, fmt.Errorf("unable to scan orderpos: %s", err)
+				return nil, fmt.Errorf("unable to scan orderpos: %w", err)
+			}
+
+			p.Carrier, err = d.carrier(order.ONo, p.OPos)
+			if err != nil {
+				return nil, fmt.Errorf("unable to fetch carrier: %w", err)
 			}
 
 			order.Positions = append(order.Positions, p)
+
 		}
 
 		orders = append(orders, order)
 	}
 
 	return orders, nil
+}
+
+func (d *Database) carrier(no, pos int) (*Carrier, error) {
+	c := &Carrier{}
+	rows, err := d.db.Query(`
+		select 
+			* 
+		from 
+			tblCarrier
+		where
+			ONo = ?
+		and
+			OPos = ?
+			`,
+		no, pos)
+	if err != nil {
+		return nil, fmt.Errorf("could not query carrier: %s", err)
+	}
+
+	if !rows.Next() {
+		return nil, nil
+	}
+
+	err = rows.Scan(
+		&c.CarrierID,
+		&c.CarrierTypeID,
+		&c.ONo,
+		&c.OPos,
+		&c.PNo,
+		&c.PNoGroup,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("could not scan carrier: %s", err)
+	}
+	return c, nil
 }
 
 func (d *Database) PreviousOrders(ONos ...string) ([]FinOrder, error) {
