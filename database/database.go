@@ -72,13 +72,17 @@ func (d *Database) ActiveOrders() ([]Order, error) {
 		// further populate Positions
 		pos, err := d.db.Query(`
 			select 
-				tblOrderPos.*, tblResource.*
+				tblOrderPos.*, tblResource.*, tblParts.*, tblStates.*
 			from 
-				tblOrderPos, tblResource
+				tblOrderPos, tblResource, tblParts, tblStates
 			where
 				tblOrderPos.ONo = ?
 			and
 				tblOrderPos.ResourceID = tblResource.ResourceID
+			and
+				tblOrderPos.PNo = tblParts.PNo
+			and
+				tblOrderPos.State = tblStates.State
 		`, order.ONo)
 
 		if err != nil {
@@ -86,7 +90,7 @@ func (d *Database) ActiveOrders() ([]Order, error) {
 		}
 
 		for pos.Next() {
-			p := OrderPos{Resource: Resource{}}
+			p := OrderPos{}
 			err = pos.Scan(
 				&p.ONo,
 				&p.OPos,
@@ -97,7 +101,7 @@ func (d *Database) ActiveOrders() ([]Order, error) {
 				&p.WPNo,
 				&p.StepNo,
 				&p.MainOPos,
-				&p.State,
+				&p.StateID,
 				&p.ResourceID,
 				&p.OpNo,
 				&p.WONo,
@@ -116,6 +120,20 @@ func (d *Database) ActiveOrders() ([]Order, error) {
 				&p.Resource.WebPage,
 				&p.Resource.DefaultBrowser,
 				&p.Resource.TopologyType,
+
+				&p.Part.PNo,
+				&p.Part.Description,
+				&p.Part.Type,
+				&p.Part.WPNo,
+				&p.Part.Picture,
+				&p.Part.BasePallet,
+				&p.Part.MrpType,
+				&p.Part.SafetyStock,
+				&p.Part.LotSize,
+
+				&p.State.State,
+				&p.State.Description,
+				&p.State.Short,
 			)
 
 			if err != nil {

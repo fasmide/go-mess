@@ -8,7 +8,6 @@ type OrderPos struct {
 	WPNo     int
 	StepNo   int
 	MainOPos int
-	State    int
 	OpNo     int
 	WONo     int
 	PNo      int
@@ -24,4 +23,8 @@ type OrderPos struct {
 	ResourceID int
 	Resource   Resource
 	Carrier    *Carrier
+	Part       Part
+
+	StateID int
+	State   State
 }
