@@ -5,7 +5,7 @@ type Part struct {
 	Description string
 	Type        int
 	WPNo        int
-	Picture     string
+	Picture     *string
 	BasePallet  int
 	MrpType     int
 	SafetyStock int
