@@ -168,8 +168,9 @@ func (d *Database) carrier(no, pos int) (*Carrier, error) {
 			OPos = ?
 			`,
 		no, pos)
+
 	if err != nil {
-		return nil, fmt.Errorf("could not query carrier: %s", err)
+		return nil, fmt.Errorf("could not query carrier (no: %d, pos: %d): %s", no, pos, err)
 	}
 
 	if !rows.Next() {

@@ -53,18 +53,23 @@ func (a *API) changeLoop() {
 		if err != nil {
 			err = fmt.Errorf("could not lookup active orders: %w", err)
 			log.Printf(err.Error())
-			return
+			break
 		}
 
 		set, err := diff.Diff(current, next)
 		if err != nil {
 			log.Printf("unable to calculate change set: %s", err)
-			return
+			break
 		}
 
-		go a.emit(set)
+		if set != nil {
+			go a.emit(set)
+		}
+
 		current = next
 	}
+
+	log.Printf("oops, change loop broken - no further updates will be emitted")
 }
 
 func (a *API) emit(s diff.Changelog) {
@@ -119,7 +124,9 @@ func (a *API) removeClient(c *websocket.Conn) {
 func (a *API) changes(w http.ResponseWriter, r *http.Request) {
 
 	// startup the change loop
-	a.loop.Do(a.changeLoop)
+	a.loop.Do(func() {
+		go a.changeLoop()
+	})
 
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -133,13 +140,16 @@ func (a *API) changes(w http.ResponseWriter, r *http.Request) {
 	a.clients = append(a.clients, c)
 	a.Unlock()
 
+	log.Printf("accepted subscription from %s", r.RemoteAddr)
+
 	// throw away incoming messages
 	for {
-		_, _, err := c.ReadMessage()
+		_, payload, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read:", err)
 			break
 		}
+		log.Printf("Someone sent us: %s", string(payload))
 	}
 
 	a.removeClient(c)
